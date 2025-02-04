@@ -1,0 +1,88 @@
+cabal-version:       2.2
+
+name:                hogue
+version:             0.1.0.0
+-- synopsis:
+-- description:
+homepage:            https://github.com/githubuser/hogue#readme
+license:             BSD-3-Clause
+license-file:        LICENSE
+author:              Will Johnson
+maintainer:          maintainer@willj.dev
+copyright:           2025 Will Johnson
+category:            Game
+build-type:          Simple
+extra-source-files:  README.md
+                     CHANGELOG.md
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Game.Hogue.Config
+                     , Game.Hogue.Coord
+                     , Game.Hogue.Corridor
+                     , Game.Hogue.Daemon
+                     , Game.Hogue.Fuse
+                     , Game.Hogue.Item
+                     , Game.Hogue.Level
+                     , Game.Hogue.Monster
+                     , Game.Hogue.Player
+                     , Game.Hogue.Room
+                     , Game.Hogue.State
+  build-depends:       base >= 4.7 && < 5
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Widentities
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wmissing-export-lists
+                       -Wmissing-home-modules
+                       -Wpartial-fields
+                       -Wredundant-constraints
+
+executable hogue
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  build-depends:       base
+                     , hogue
+                     , brick
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Widentities
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wmissing-export-lists
+                       -Wmissing-home-modules
+                       -Wpartial-fields
+                       -Wredundant-constraints
+                       -threaded
+                       -rtsopts
+                       -with-rtsopts=-N
+
+test-suite hogue-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  other-modules:       Data.String.StripSpec
+  build-depends:       base
+                     , hogue
+                     , hspec
+                     , QuickCheck
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Widentities
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wmissing-export-lists
+                       -Wmissing-home-modules
+                       -Wpartial-fields
+                       -Wredundant-constraints
+                       -threaded
+                       -rtsopts
+                       -with-rtsopts=-N
+
+source-repository head
+  type:     git
+  location: https://github.com/githubuser/hogue
