@@ -29,6 +29,10 @@ library
                      , Game.Hogue.Room
                      , Game.Hogue.State
   build-depends:       base >= 4.7 && < 5
+                     , lens
+                     , polysemy
+                     , polysemy-plugin
+                     , random
   default-language:    Haskell2010
   ghc-options:         -Wall
                        -Wcompat
@@ -39,6 +43,20 @@ library
                        -Wmissing-home-modules
                        -Wpartial-fields
                        -Wredundant-constraints
+                       -O2
+                       -flate-specialise
+                       -fspecialise-aggressively
+                       -fplugin=Polysemy.Plugin
+  default-extensions:  DataKinds
+                     , FlexibleContexts
+                     , GADTs
+                     , LambdaCase
+                     , PolyKinds
+                     , RankNTypes
+                     , ScopedTypeVariables
+                     , TypeApplications
+                     , TypeOperators
+                     , TypeFamilies
 
 executable hogue
   hs-source-dirs:      app

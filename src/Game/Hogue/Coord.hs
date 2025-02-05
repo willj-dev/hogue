@@ -12,3 +12,6 @@ data Coord = Coord Int Int
 coord :: Int -> Int -> Coord
 coord x y | x < 0 || y < 0 = error "Invalid Coordinate!"
 coord x y = Coord x y
+
+instance Semigroup Coord where
+  (Coord x1 y1) <> (Coord x2 y2) = Coord (x1 + x2) (y1 + y2)
