@@ -24,11 +24,15 @@ library
                      , Game.Hogue.Fuse
                      , Game.Hogue.Item
                      , Game.Hogue.Level
+                     , Game.Hogue.Log
                      , Game.Hogue.Monster
                      , Game.Hogue.Player
+                     , Game.Hogue.Random
                      , Game.Hogue.Room
                      , Game.Hogue.State
   build-depends:       base >= 4.7 && < 5
+                     , array
+                     , containers
                      , lens
                      , polysemy
                      , polysemy-plugin
@@ -64,6 +68,7 @@ executable hogue
   build-depends:       base
                      , hogue
                      , brick
+                     , random
   default-language:    Haskell2010
   ghc-options:         -Wall
                        -Wcompat
