@@ -15,26 +15,47 @@ import Polysemy.State
 import System.Random (RandomGen)
 import qualified System.Random as R
 
+-- | Pass throughs to @System.Random@ which will be interpreted as a @State@ to carry the generator forward
 data RogueRandom m a where
-  -- | Pass through to standard @uniform@.
   Random :: R.Random r => RogueRandom m r
-  -- | Produces a list with the given number of random values.
-  RandomN :: R.Random r => Int -> RogueRandom m [r]
-  -- | Pass through to standard @uniformR@.
   RandomR :: R.Random r => (r, r) -> RogueRandom m r
-  -- | Produces a list with the given number of random values in the given range.
-  RandomRN :: R.Random r => (r, r) -> Int -> RogueRandom m [r]
-  -- | Picks a random element from the given list. The list must be finite.
-  Pick :: [a] -> RogueRandom m a
-  -- | Generates a random number between 0 (inclusive) and the given positive integer (exclusive).
-  --   If the given number is less than or equal to 0, returns 0.
-  RandomLT :: Int -> RogueRandom m Int
-  -- | Flips a weighted coin. The given integer is a percent probability that the result will be true.
-  WeightedFlip :: Int -> RogueRandom m Bool
-  -- | Computes a "one in X" chance.
-  OneIn :: Int -> RogueRandom m Bool
 
 makeSem ''RogueRandom
+
+  -- | Produces a list with the given number of random values.
+randomN :: (Member RogueRandom r, R.Random a) => Int -> Sem r [a]
+randomN n = replicateM n random
+
+-- | Produces a list with the given number of random values in the given range. Note that values may be repeated;
+--   use 'take' with 'shuffle' to get distinct values from a list (assuming the list didn't have any duplicates
+--   to begin with!)
+randomRN :: (Member RogueRandom r, R.Random a) => (a, a) -> Int -> Sem r [a]
+randomRN r n = replicateM n (randomR r)
+
+-- | Generates a random number between 0 (inclusive) and the given positive integer (exclusive).
+--   If the given number is less than or equal to 0, returns 0.
+randomLT :: Member RogueRandom r => Int -> Sem r Int
+randomLT x = randomR (0, x - 1)
+
+-- | Flips a weighted coin. The given integer is a percent probability that the result will be true.
+weightedFlip :: Member RogueRandom r => Int -> Sem r Bool
+weightedFlip w = fmap (w <) (randomR (0, 99))
+
+-- | Computes a "one in X" chance to be true.
+oneIn :: Member RogueRandom r => Int -> Sem r Bool
+oneIn x = fmap (== 0) (randomR (0, x - 1))
+
+-- | Picks a random element from the given list. The list must be finite.
+pick :: Member RogueRandom r => [a] -> Sem r a
+pick xs = (xs !!) <$> randomR (0, length xs - 1)
+
+shuffle :: Member RogueRandom r => [a] -> Sem r [a]
+shuffle [] = return []
+shuffle [x] = return [x]
+shuffle xs = do
+  i <- randomR (0, length xs - 2)
+  let (head, x:tail) = splitAt i xs   -- no worries, the index must admit a nonempty list in snd
+  (x :) <$> shuffle (head ++ tail)
 
 -- | Transmutes RR actions into State actions to be handled later on
 runRogueRandomAsState
@@ -43,15 +64,7 @@ runRogueRandomAsState
   -> Sem r a
 runRogueRandomAsState = interpret $ \case
   Random          -> bracketState R.random
-  RandomN n       -> replicateM n $ bracketState R.random
   RandomR r       -> bracketState $ R.randomR r
-  RandomRN r n    -> replicateM n $ bracketState $ R.randomR r
-  Pick xs         -> bracketState $ \g -> let
-    (i, g') = R.randomR (0, length xs - 1) g
-    in (xs !! i, g')
-  RandomLT ub     -> bracketState $ R.randomR (0, ub - 1)
-  WeightedFlip w  -> fmap (w <) (bracketState $ R.randomR (0, 99))
-  OneIn x         -> fmap (== 0) (bracketState $ R.randomR (0, x - 1))
 
 -- | Given a function that takes in a state and outputs a result with a modified state, embeds this into the State monad
 --   so that it automatically fetches the old state and stores the new state, then returns the result.

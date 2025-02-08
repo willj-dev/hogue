@@ -36,7 +36,10 @@ data Room
       Coord   -- ^ The point where corridors connecting to adjacent sectors join
 
 instance Show Room where
-  show (BoxRoom _ nwc@(nwx, nwy) (sex, sey) d) = (if d then "dark room " else "light room ") ++ "at " ++ show nwc ++ ", " ++ show (sex - nwx) ++ "x" ++ show (sey - nwy)
+  show (BoxRoom _ nwc@(nwx, nwy) (sex, sey) d) =
+    (if d then "dark room " else "light room ")
+    ++ "at " ++ show nwc ++ ", "
+    ++ show (sex - nwx + 1) ++ "x" ++ show (sey - nwy + 1)
   show (MazeRoom _ _) = "maze room"
   show (GoneRoom _ c) = "gone room at " ++ show c
 

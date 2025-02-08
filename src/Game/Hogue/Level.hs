@@ -42,19 +42,19 @@ Process for generating a new level:
 
 module Game.Hogue.Level where
 
-import Control.Lens hiding (Level)
+import Control.Lens hiding (Level, indices)
 import Polysemy
-import Polysemy.Reader (Reader, runReader, asks)
-import Polysemy.State ( State, put, get, runState, execState, evalState )
+import Polysemy.Reader
+import Polysemy.State
 
-import Game.Hogue.Coord ( Coord, coord )
+import Game.Hogue.Coord
 import Game.Hogue.Corridor ( Corridor )
 import Game.Hogue.Item ( Item )
 import Game.Hogue.Log
 import Game.Hogue.Monster ( Monster )
 import Game.Hogue.Random
 import Game.Hogue.Room
-import Data.Array (range, Array, assocs, (!), array)
+import Data.Array (range, Array, assocs, (!), array, indices)
 import Control.Monad (replicateM)
 import System.Random (RandomGen)
 
@@ -93,7 +93,6 @@ generateLevel c = runReader c $ do
   (l, _) <- runState emptyRooms $ connectRooms
     >> addItems
     >> addTraps
-    >> placeStairs
   return l
 
 -- | First things first: what are the shapes of the rooms?
@@ -102,7 +101,7 @@ makeRooms
   => Sem r Level
 makeRooms = do
   nGoneRooms <- randomLT 4
-  goneRoomIndices <- randomRN sectorIndexRange nGoneRooms
+  goneRoomIndices <- take nGoneRooms <$> shuffle sectorIndices
   let hereRoomIndices = filter (`notElem` goneRoomIndices) sectorIndices
   goneRooms <- zip goneRoomIndices <$> replicateM nGoneRooms newGoneRoom
   info $ "gone rooms: " ++ show goneRooms
@@ -138,7 +137,26 @@ newBoxRoom isDark = do
 
 -- | TODO
 newMazeRoom :: Member RogueRandom r => Sem r Room
-newMazeRoom = undefined
+newMazeRoom = do
+  firstCoord <- randomR ((0, 0), (sectorWidth - 1, sectorHeight - 1))
+  mazeCoords <- continueMaze [firstCoord]
+  return $ MazeRoom noDoors mazeCoords
+
+continueMaze :: Member RogueRandom r => [Coord] -> Sem r [Coord]
+continueMaze maze = case allowedMoves maze of
+  [] -> return maze
+  moves -> do
+    nextMove <- pick moves
+    continueMaze (nextMove ++ maze)
+
+-- | To build a maze, we check 2 spaces in each direction from where we are now. (We want walls between )
+allowedMoves :: [Coord] -> [[Coord]]
+allowedMoves [] = [] -- this really shouldn't happen but GHC was yelling at me
+allowedMoves (pos : prev) = let
+  allDirections = [E, N, W, S]
+  canMove d = let target = move pos d 2 in validLocalCoord target && target `notElem` prev
+  allowedDirections = filter canMove allDirections
+  in (\d -> [move pos d 2, move pos d 1]) <$> allowedDirections
 
 -- | Pick a random spot to connect adjacent corridors through in this sector. No doors for now.
 newGoneRoom :: Member RogueRandom r => Sem r Room
@@ -161,11 +179,6 @@ addTraps
   :: Members [Reader LevelConfig, RogueRandom, State Level] r
   => Sem r ()
 addTraps = return ()
-
-placeStairs
-  :: Members [Reader LevelConfig, RogueRandom, State Level] r
-  => Sem r ()
-placeStairs = return ()
 
 -- | The range of sector indices (inclusive)
 sectorIndexRange :: (Coord, Coord)
@@ -202,6 +215,14 @@ mapCoord (six, siy) (sx, sy) = (six * sectorWidth + sx, siy * sectorHeight + sy)
 localCoord :: Coord -> (Coord, Coord)
 localCoord (x, y) = ((x `div` sectorWidth, y `div` sectorHeight), (x `mod` sectorWidth, y `mod` sectorHeight))
 
+validLocalCoord :: Coord -> Bool
+validLocalCoord (x, y)
+  | x < 0             = False
+  | x >= sectorWidth  = False
+  | y < 0             = False
+  | y >= sectorHeight = False
+  | otherwise         = True
+
 dbgCharAt :: Level -> Coord -> Char
 dbgCharAt l c = let
   (si, sc@(sx, sy)) = localCoord c
@@ -213,7 +234,7 @@ dbgCharAt l c = let
       else if sx == nwx || sx == sex then '|'
       else if d then '*'
       else '.'
-    MazeRoom _ _ -> 'M'
+    MazeRoom _ coords -> if sc `elem` coords then '#' else ' '
     GoneRoom _ gc -> if gc == sc then 'X' else ' '
 
 dbgMap :: Level -> [String]
