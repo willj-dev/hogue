@@ -32,13 +32,13 @@ sector (Coord x y) = case (x `div` sectorWidth, y `div` sectorHeight) of
   (0, 2) -> S.SW
   (1, 0) -> S.N
   (1, 1) -> S.C
-  (1, 2) -> S.E
-  (2, 0) -> S.SW
-  (2, 1) -> S.S
+  (1, 2) -> S.S
+  (2, 0) -> S.NE
+  (2, 1) -> S.E
   (2, 2) -> S.SE
-  badSectorIndex -> error $ "GlobalCoord.localCoord: Invalid sector index: " ++ show badSectorIndex ++ " from global coord " ++ show (x,y)
+  badSectorIndex -> error $ "Coord.sector: Invalid sector index: " ++ show badSectorIndex ++ " from global coord " ++ show (x,y)
 
--- | What is the local x coordinate of this point relative to its sector?
+-- | What is the local x coordinate of this point relative to its sector?sta
 lx :: Coord -> Int
 lx (Coord x _) = x `mod` sectorWidth
 

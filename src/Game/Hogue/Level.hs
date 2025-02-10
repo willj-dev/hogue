@@ -229,4 +229,4 @@ dbgCharAt l c = let
     GoneRoom _ gc -> if gc == c then 'X' else ' '
 
 dbgMap :: Level -> [String]
-dbgMap l = [ [ dbgCharAt l (Coord x y) | x <- [0 .. 3 * sectorWidth - 1] ] | y <- [0 .. 3 * sectorHeight - 1] ]
+dbgMap l = [ [ dbgCharAt l (Coord x y) | x <- [0 .. mapWidth - 1] ] | y <- [0 .. mapHeight - 1] ]
