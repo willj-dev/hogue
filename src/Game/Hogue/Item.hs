@@ -5,4 +5,5 @@ Description : Things to pick up and put in a backpack!
 
 module Game.Hogue.Item (Item(..)) where
 
-data Item = Item -- todo
+data Item
+  = GoldPile Int -- ^ some pieces of gold

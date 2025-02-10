@@ -42,24 +42,25 @@ Process for generating a new level:
 module Game.Hogue.Level where
 
 import Control.Lens hiding (Level, indices)
+import Data.Array (Array, assocs, (!), array)
+import Data.Maybe (catMaybes)
 import Polysemy
 import Polysemy.Reader hiding (local)
 import Polysemy.State
+import System.Random (RandomGen)
 
 import Game.Hogue.Coord
-import Game.Hogue.Corridor ( Corridor )
-import Game.Hogue.Item ( Item )
+import Game.Hogue.Corridor
+import Game.Hogue.Item
 import Game.Hogue.Log
-import Game.Hogue.Monster ( Monster )
+import Game.Hogue.Monster
 import Game.Hogue.Random
 import Game.Hogue.Room
 import Game.Hogue.Sector
-import Data.Array (Array, assocs, (!), array)
-import System.Random (RandomGen)
-import Data.Maybe (catMaybes)
 
 data LevelConfig = LevelConfig
-  { _depth :: Int
+  { _depth      :: Int  -- ^ How many levels deep are we?
+  , _unexplored :: Bool -- ^ Is this an unexplored level (i.e. should we put gold in)?
   }
 
 makeLenses 'LevelConfig
@@ -67,11 +68,11 @@ makeLenses 'LevelConfig
 type Rooms = Array Sector Room
 
 data Level = Level
-  { _rooms     :: Rooms       -- ^ The rooms on this level
-  , _exit      :: Coord       -- ^ The location of the stairs (up or down, depending on whether the player found the Amulet)
-  , _corridors :: [Corridor]  -- ^ The corridors connecting the rooms on this level
-  , _monsters  :: [Monster]   -- ^ The monsters in this level
-  , _items     :: [Item]      -- ^ The items on the floor in this level
+  { _rooms     :: Rooms               -- ^ The rooms on this level
+  , _exit      :: Coord               -- ^ The location of the stairs (up or down, depending on whether the player found the Amulet)
+  , _corridors :: [Corridor]          -- ^ The corridors connecting the rooms on this level
+  , _monsters  :: [(Coord, Monster)]  -- ^ The monsters in this level
+  , _items     :: [(Coord, Item)]     -- ^ The items on the floor in this level
   }
 
 makeLenses 'Level
@@ -89,7 +90,7 @@ generateLevel
   :: Members [RogueRandom, Log] r
   => LevelConfig
   -> Sem r Level
-generateLevel c = runReader c makeRooms
+generateLevel c = runReader c $ makeRooms
   >>= addGoldAndMonsters
   >>= connectRooms
   >>= addItems
@@ -181,15 +182,24 @@ newGoneRoom s = do
   crossY <- randomR (1, sectorHeight - 2)
   return $ GoneRoom noDoors (local s crossX crossY)
 
-addGoldAndMonsters :: Members [Log, RogueRandom] r =>
+addGoldAndMonsters :: Members [Log, RogueRandom, Reader LevelConfig] r =>
   Level -> Sem r Level
 addGoldAndMonsters = return
 
-makeGoldPile :: Members [Log, RogueRandom] r =>
-  Room -> Sem r (Maybe Item)
-makeGoldPile room = return Nothing
+makeGoldPile :: Members [Log, RogueRandom, Reader LevelConfig] r =>
+  Room -> Sem r (Maybe (Coord, Item))
+makeGoldPile room = do
+  isUnexplored <- asks (^. unexplored)
+  coinFlip <- weightedFlip 50
+  d <- asks (^. depth)
+  if isUnexplored && coinFlip
+    then do
+      val <- (2 +) <$> randomLT (50 + 10*d)
+      c <- pick (floorCoords room)
+      return $ Just (c, GoldPile val)
+    else return Nothing
 
-makeMonster :: Members [Log, RogueRandom] r =>
+makeMonster :: Members [Log, RogueRandom, Reader LevelConfig] r =>
   Room -> Bool -> Sem r (Maybe Monster)
 makeMonster room hasGold = return Nothing
 
@@ -197,11 +207,11 @@ connectRooms :: Members [Log, RogueRandom] r =>
   Level -> Sem r Level
 connectRooms = return
 
-addItems :: Members [Log, RogueRandom] r =>
+addItems :: Members [Log, RogueRandom, Reader LevelConfig] r =>
   Level -> Sem r Level
 addItems = return
 
-addTraps :: Members [Log, RogueRandom] r =>
+addTraps :: Members [Log, RogueRandom, Reader LevelConfig] r =>
   Level -> Sem r Level
 addTraps = return
 
