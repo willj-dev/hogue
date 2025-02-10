@@ -13,4 +13,4 @@ dbgLvl d = do
   mapM_ putStrLn (dbgMap lvl)
 
 main :: IO ()
-main = replicateM_ 25 (dbgLvl 15)
+main = replicateM_ 25 (dbgLvl 5)

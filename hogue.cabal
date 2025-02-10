@@ -29,6 +29,7 @@ library
                      , Game.Hogue.Player
                      , Game.Hogue.Random
                      , Game.Hogue.Room
+                     , Game.Hogue.Sector
                      , Game.Hogue.State
   build-depends:       base >= 4.7 && < 5
                      , array

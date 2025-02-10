@@ -13,20 +13,15 @@ module Game.Hogue.Room
   , floorCoords
   , hasFloor
   , noDoors
-  , sectorWidth
-  , sectorHeight
   ) where
 
 import Game.Hogue.Coord
-import Data.Array (range)
-import Game.Hogue.Random (RogueRandom)
-import Polysemy (Sem, Member)
 
 data Room
   = BoxRoom   -- ^ An old-fashioned rectangular room with four walls and a floor
       Doors   -- ^ Where are the doors?
-      Coord   -- ^ The coordinate of the wall in the top-left corner
-      Coord   -- ^ The coordinate of the wall in the bottom-right corner
+      Coord   -- ^ The local coordinate of the wall in the top-left corner
+      Coord   -- ^ The local coordinate of the wall in the bottom-right corner
       Bool    -- ^ Whether or not this room is dark
   | MazeRoom  -- ^ A maze room, which is just a long winding corridor that fills a sector
       Doors   -- ^ Where are the entrances? These are always along the edge of the sector this maze belongs to
@@ -36,11 +31,12 @@ data Room
       Coord   -- ^ The point where corridors connecting to adjacent sectors join
 
 instance Show Room where
-  show (BoxRoom _ nwc@(nwx, nwy) (sex, sey) d) =
-    (if d then "dark room " else "light room ")
-    ++ "at " ++ show nwc ++ ", "
-    ++ show (sex - nwx + 1) ++ "x" ++ show (sey - nwy + 1)
-  show (MazeRoom _ _) = "maze room"
+  show (BoxRoom _ nw se d) =
+    (if d then "dark room" else "light room")
+    ++ " at " ++ show nw ++ ", "
+    ++ show (dx + 1) ++ "x" ++ show (dy + 1)
+    where (dx, dy) = se .-. nw
+  show (MazeRoom _ maze) = "maze room (length: " ++ show (length maze) ++ ")"
   show (GoneRoom _ c) = "gone room at " ++ show c
 
 doors :: Room -> Doors
@@ -53,9 +49,14 @@ hasFloor :: Room -> Bool
 hasFloor (GoneRoom _ _) = False
 hasFloor _ = True
 
--- | Returns the list of (local) coordinates at which something could be placed in this room
+-- | Returns the list of coordinates at which something could be placed in this room
 floorCoords :: Room -> [Coord]
-floorCoords (BoxRoom _ nw se _) = range (nw .+. (1, 1), se .-. (1, 1))  -- anywhere except the walls around the edge
+floorCoords (BoxRoom _ nw se _) = let
+  minX = gx nw + 1
+  maxX = gx se - 1
+  minY = gy nw + 1
+  maxY = gy se - 1
+  in square (Coord minX minY) (Coord maxX maxY)
 floorCoords (MazeRoom _ cs) = cs
 floorCoords (GoneRoom _ _) = []
 
@@ -68,10 +69,3 @@ data Doors = Doors
 
 noDoors :: Doors
 noDoors = Doors Nothing Nothing Nothing Nothing
-
--- | These constants define how much space is available for a room to take up. The map is made of 3x3 sectors, so the total size of the
---   map will thus be 81 columns by 24 rows. This is one character wider than the original Rogue (which was 80x24), because I wanted the
---   sectors to all be equal in size.
-sectorWidth, sectorHeight :: Int
-sectorWidth = 27
-sectorHeight = 8
